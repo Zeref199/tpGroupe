@@ -90,18 +90,47 @@ public class TraceQueryService {
     }
 
     public long countTraces(String operation, Long from, Long to, String status) throws IOException {
-        int pageSize = 500;
-        int page = 0;
-        long totalCount = 0;
-        boolean done = false;
-
-        while (!done) {
-            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
-
+        // If status is not provided, use optimized count query
+        if (status == null) {
             BoolQueryBuilder query = QueryBuilders.boolQuery();
+
             if (operation != null && !operation.isBlank()) {
                 query.must(QueryBuilders.matchQuery("operationName", operation));
             }
+
+            if (from != null || to != null) {
+                RangeQueryBuilder timeRange = QueryBuilders.rangeQuery("startTimeMillis");
+                if (from != null) timeRange.gte(from);
+                if (to != null) timeRange.lte(to);
+                query.must(timeRange);
+            }
+
+            SearchSourceBuilder source = new SearchSourceBuilder()
+                    .query(query)
+                    .size(0)  // optimized: don't return documents
+                    .trackTotalHits(true);
+
+            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
+            request.source(source);
+
+            SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
+            return response.getHits().getTotalHits().value;
+        }
+
+        // Else: fallback to paginated scanning if status is needed
+        int pageSize = 500;
+        int page = 0;
+        long totalCount = 0;
+        long maxAllowedHits = 10_000;
+        boolean done = false;
+
+        while (!done) {
+            BoolQueryBuilder query = QueryBuilders.boolQuery();
+
+            if (operation != null && !operation.isBlank()) {
+                query.must(QueryBuilders.matchQuery("operationName", operation));
+            }
+
             if (from != null || to != null) {
                 RangeQueryBuilder timeRange = QueryBuilders.rangeQuery("startTimeMillis");
                 if (from != null) timeRange.gte(from);
@@ -114,22 +143,24 @@ public class TraceQueryService {
                     .size(pageSize)
                     .from(page * pageSize);
 
+            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
             request.source(source);
             SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
-            SearchHit[] hits = response.getHits().getHits();
 
-            if (hits.length == 0) {
-                done = true;
-            }
+            SearchHit[] hits = response.getHits().getHits();
+            if (hits.length == 0) break;
 
             for (SearchHit hit : hits) {
                 Map<String, Object> src = hit.getSourceAsMap();
                 String op = (String) src.get("operationName");
                 Map<String, String> tags = extractTags((List<Map<String, Object>>) src.get("tags"));
                 Map<String, String> details = traceDetailsExtractor.extract(op, tags);
-                String computedStatus = details.get("status");
-                if (status == null || status.equalsIgnoreCase(computedStatus)) {
+
+                if (status.equalsIgnoreCase(details.get("status"))) {
                     totalCount++;
+                    if (totalCount > maxAllowedHits) {
+                        throw new IllegalArgumentException("Too many results. Please reduce the time range.");
+                    }
                 }
             }
 

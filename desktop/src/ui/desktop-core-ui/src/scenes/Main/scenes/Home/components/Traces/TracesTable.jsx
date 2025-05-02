@@ -1,18 +1,30 @@
 import React, {useEffect, useRef, useState} from 'react';
-import { Row, Col, Button, Label, Input,CgdTable, Filtering, LoadingSpinner2 } from '@beyond-framework/common-uitoolkit-beyond';
+import { DatePicker2, Dropdown2, DropdownItem2, Row, Col,CgdTable, LoadingSpinner2 } from '@beyond-framework/common-uitoolkit-beyond';
 import {connect} from 'react-redux';
 import actions from '../../actions';
 import PropTypes from "prop-types";
+import moment from 'moment';
+import TimeRangePicker from "../helpers/TimeRangePicker";
 
 
 function TracesTableComponent({ traces, loading, fetchTraces }) {
 
     const [page, setPage] = useState(0);
     const [pageSize, setPageSize] = useState(10);
+    const [selectedOperation, setSelectedOperation] = useState('');
+
+    const [from, setFrom] = useState();
+    const [to, setTo] = useState();
+
+    const applyTimeRange = (fromMillis, toMillis) => {
+        setFrom(fromMillis);
+        setTo(toMillis);
+        setPage(0); // reset pagination
+    };
 
     useEffect(() => {
-        fetchTraces({ page, size: pageSize });
-    }, [page, pageSize]);
+        fetchTraces({ page, size: pageSize, operation: selectedOperation, from, to });
+    }, [page, pageSize, selectedOperation]);
 
 
     if (loading) {
@@ -25,6 +37,35 @@ function TracesTableComponent({ traces, loading, fetchTraces }) {
 
     return (
         <>
+            <Row className="mb-4">
+                <Col md={3}>
+                    <Dropdown2 id="operation-dropdown" label={selectedOperation || 'Filter by Operation'}>
+                        {[
+                            { label: 'All', value: '' },
+                            { label: 'AbonnementPS', value: 'AbonnementPS' },
+                            { label: 'IDB', value: 'IDB' },
+                            { label: 'CLC', value: 'CLC' },
+                            { label: 'DmdePratique', value: 'DmdePratique' },
+                            { label: 'ConventionPS', value: 'ConventionPS' },
+                            { label: 'restitutionAMC', value: 'restitutionAMC' },
+                            { label: 'InterAMC', value: 'InterAMC' },
+                            { label: 'DmdeSignature', value: 'DmdeSignature' }
+                        ].map(op => (
+                            <DropdownItem2
+                                key={op.value}
+                                type="item"
+                                label={op.label}
+                                id={`op-${op.value}`}
+                                action={() => {
+                                    setSelectedOperation(op.value);
+                                    setPage(0); // Reset pagination
+                                }}
+                            />
+                        ))}
+                    </Dropdown2>
+                </Col>
+            </Row>
+            <TimeRangePicker onApply={applyTimeRange} />
             <CgdTable
                 id="traces-table"
                 data={traces}
@@ -55,6 +96,7 @@ function TracesTableComponent({ traces, loading, fetchTraces }) {
                         accessor: row => row.details?.['request.num.amc'] || '-',
                         type: 'TEXT'
                     },
+                    { id: 'start-time', Header: 'Execution Time', accessor: row => moment(row.startTime).format('YYYY-MM-DD HH:mm:ss'), type: 'TEXT' },
                 ]}
             />
 

@@ -7,7 +7,7 @@ elasticsearch:
   port: 443
   scheme: https
   user: admin
-  pass: mVC%w=EzLo3+
+  pass: jaeger-tpgroup-prod
 
 management:
   health:
