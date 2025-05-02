@@ -1,0 +1,10 @@
+apiVersion: v2
+name: desktop-core-ui
+description: Helm chart for desktop-core-ui in desktop service.
+type: application
+appVersion: "${imageTag}"
+version: 0.0.0
+dependencies:
+  - name: helm-chart-beyond-common
+    repository: "@beyond"
+    version: v14.5.7

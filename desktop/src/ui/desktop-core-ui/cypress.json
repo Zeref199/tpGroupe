@@ -1,0 +1,12 @@
+{
+    "baseUrl": "http://localhost:3000/#/",
+    "chromeWebSecurity": false,
+    "viewportWidth": 1920,
+    "viewportHeight": 1080,
+    "env": {
+        "auth_base_url": "https://idp.dev.beyond.cegedim.cloud/auth",
+        "auth_realm": "dev",
+        "auth_client_id": "ui"
+    },
+    "video": false
+}

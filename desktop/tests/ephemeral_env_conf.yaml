@@ -1,0 +1,23 @@
+dependencies:
+  # Define all dependencies to microservices (name, type=(mock/referenceEnvironment/gatewayAPI))
+  microservices:
+    next-referential-preferences-api:
+      type: referenceEnvironment
+      path: /referential/preferences/api
+
+  datas:
+    # Add extensions for db to be created
+    # or Link to db in refenrence environment
+    PostgreSQL: {}
+    MongoDB: {}
+    Kafka: {}
+
+    # Define configuration for connectors
+    KafkaConnect: {}
+
+  # config GatewayAPI to access multitenant services
+  GatewayAPI: {}
+
+desktop-core-ui:
+  service:
+    enabled: "true"

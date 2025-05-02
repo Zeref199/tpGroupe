@@ -1,0 +1,21 @@
+serviceDefinition:
+  socle: Application
+  name: desktop
+  uis:
+      - name: desktop-core-ui
+  exposedUIs:
+    path: /desktop
+    artefacts:
+        - name: desktop-core-ui
+          path: /core/ui
+  probs:
+    livenessProbe:
+      artefacts:
+        - name: desktop-core-ui
+          path: /health
+          port: http
+    readinessProbe:
+      artefacts:
+        - name: desktop-core-ui
+          path: /ready
+          port: http

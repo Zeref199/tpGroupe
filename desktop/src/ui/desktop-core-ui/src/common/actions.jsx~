@@ -1,0 +1,55 @@
+/* ************************************* */
+/* ********       IMPORTS       ******** */
+/* ************************************* */
+import { AlertEvents } from '@beyond-framework/common-uitoolkit-beyond';
+import EventTypes from './EventTypes';
+import Api from './resources/Api';
+import types from './types';
+
+/* ************************************* */
+/* ********  PRIVATE FUNCTIONS  ******** */
+/* ************************************* */
+
+/**
+ * Remove alert.
+ * @param alert
+ * @returns {{alert: *}}
+ */
+function removeAlert(alert) {
+    return { ...AlertEvents.ALERT_SYSTEM_HIDE_NOTIFICATION, alert };
+}
+
+function updateBreadcrumbRoutes(routes) {
+    return dispatch =>
+        dispatch({
+            ...EventTypes.UPDATE_BREADCRUMB_ROUTES,
+            meta: { routes },
+        });
+}
+
+export function fetchTraces() {
+    return async dispatch => {
+        dispatch({ type: types.FETCH_TRACES_PENDING.type });
+        try {
+            const response = await Api.all('traces').getAll(); // GET /api/traces
+            dispatch({
+                type: types.FETCH_TRACES_FULFILLED.type,
+                payload: response.body(), // restful.js returns a wrapped response
+            });
+        } catch (error) {
+            dispatch({
+                type: types.FETCH_TRACES_REJECTED.type,
+                error: error.message || 'Failed to fetch traces',
+            });
+        }
+    };
+}
+
+/* ************************************* */
+/* ********       EXPORTS       ******** */
+/* ************************************* */
+const actions = {
+    removeAlert,
+    updateBreadcrumbRoutes,
+};
+export default actions;

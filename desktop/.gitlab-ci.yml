@@ -1,0 +1,9 @@
+include:
+  - project: "Infrastructure/CI-CD/ci"
+    file: "gradle-ci/ci.yml"
+    ref: "v14.6.0"
+variables:
+  NO_NODE_IN_SERVICE: 1
+  NO_PYTHON_IN_SERVICE: 1
+  NO_SHELL_IN_SERVICE: 1
+  NO_JAVA_IN_SERVICE: 1

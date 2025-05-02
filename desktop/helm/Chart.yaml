@@ -1,0 +1,10 @@
+apiVersion: v2
+name: desktop
+description: Helm chart for desktop service.
+type: application
+version: 0.0.0
+appVersion: "${imageTag}"
+dependencies:
+  - version: v14.5.7
+    name: helm-chart-beyond-common
+    repository: '@beyond'

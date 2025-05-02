@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Mis à jour d'un nouveau type de calendrier",
+  "description": "Evènement émis lorsqu'un nouveau type de calendrier est MAJ",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifiant du type de calendrier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nom du type de calendrier"
+    },
+    "color": {
+      "type": "string",
+      "description": "Couleur du Type de calendrier"
+    },
+    "nature": {
+      "type": "string",
+      "description": "Nature du type de calendrier(SPECIFIC/RECCURENT)"
+    },
+    "priority": {
+      "type": "number",
+      "description": "Priorité du type de calendrier"
+    },
+    "algorithm": {
+      "type": "string",
+      "description": "Algorythm du type du calendrier"
+    },
+    "daysOfWeek": {
+      "type": "array",
+      "days": {
+        "type": "number"
+      }
+    },
+    "specificDays": {
+      "type": "array",
+      "dates": {
+        "type": "string"
+      }
+    },
+    "days": {
+      "type": "array",
+      "days": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "nature"
+  ],
+  "$id": "Application.desktop.update.calendar.type.event/0.0.1"
+}

@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: TpGroupe-obs-api
+
+elasticsearch:
+  host: beyond-prod.es.cegedim.cloud
+  port: 443
+  scheme: https
+  user: jaeger-tpgroup-prod
+  pass: jaeger-tpgroup-prod
+
+management:
+  health:
+    elasticsearch:
+      enabled: false

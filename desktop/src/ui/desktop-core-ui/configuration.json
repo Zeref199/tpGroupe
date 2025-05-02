@@ -1,0 +1,9 @@
+{
+  "clientId": "${keycloak_clientId}",
+  "url": "${keycloak_auth_server_url}",
+  "enabled": "${keycloak_enabled}",
+  "realm": "${keycloak_realm}",
+  "authorizationEnabled": "${authorization_enabled}",
+  "SHOULD_DISPLAY_LOGO": "${SHOULD_DISPLAY_LOGO}",
+  "BEYOND_VERSION": "${BEYOND_VERSION}"
+}

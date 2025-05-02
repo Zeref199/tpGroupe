@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "MAJ d'un nouveau calendrier",
+  "description": "Evènement émis lorsqu'un calendrier est MAJ",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifiant du calendrier"
+    },
+    "name": {
+      "type": "string",
+      "description": "Nom du calendrier"
+    },
+    "startDate": {
+      "type": "string",
+      "description": "Date de début du calendrier"
+    },
+    "endDate": {
+      "type": "string",
+      "description": "Date de fin du calendrier"
+    },
+    "type": {
+      "type": "array",
+      "name": {
+        "type": "string"
+      }
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "startDate",
+    "endDate",
+    "type"
+  ],
+  "$id": "Application.desktop.update.calendar.event/0.0.1"
+}

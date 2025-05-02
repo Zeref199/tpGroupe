@@ -1,0 +1,5 @@
+{
+  "title": "erreur",
+  "@BAL/GET_MENU_ENTRIES_REJECTED": "Une erreur s’est produite lors de la tentative de récupération du menu.",
+  "@BAL/GET_FAVORITES_MENU_ENTRIES_REJECTED": "Une erreur s’est produite lors de la tentative de récupération des favoris."
+}

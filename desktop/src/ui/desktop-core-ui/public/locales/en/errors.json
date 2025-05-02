@@ -1,0 +1,5 @@
+{
+  "title": "error",
+  "@BAL/GET_MENU_ENTRIES_REJECTED": "An error occurred while trying to load the menu.",
+  "@BAL/GET_FAVORITES_MENU_ENTRIES_REJECTED": "An error occurred while trying to load the favorites."
+}

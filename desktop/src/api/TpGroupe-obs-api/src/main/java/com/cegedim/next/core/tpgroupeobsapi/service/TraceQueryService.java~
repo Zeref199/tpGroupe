@@ -1,0 +1,313 @@
+package com.cegedim.next.core.tpgroupeobsapi.service;
+
+import com.cegedim.next.core.tpgroupeobsapi.dto.TraceEventDTO;
+import com.cegedim.next.core.tpgroupeobsapi.helpers.TraceDetailsExtractor;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.elasticsearch.action.search.SearchRequest;
+import org.elasticsearch.action.search.SearchResponse;
+import org.elasticsearch.client.RequestOptions;
+import org.elasticsearch.client.RestHighLevelClient;
+import org.elasticsearch.index.query.BoolQueryBuilder;
+import org.elasticsearch.index.query.QueryBuilders;
+import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.search.SearchHit;
+import org.elasticsearch.search.builder.SearchSourceBuilder;
+import org.elasticsearch.search.sort.SortOrder;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class TraceQueryService {
+
+    private final RestHighLevelClient esClient;
+    private final TraceDetailsExtractor traceDetailsExtractor;
+
+
+    public List<TraceEventDTO> getTraces(String operation, Long from, Long to, int page, int size, String status) throws IOException {
+        BoolQueryBuilder baseQuery = QueryBuilders.boolQuery();
+
+        if (operation != null && !operation.isBlank()) {
+            baseQuery.must(QueryBuilders.matchQuery("operationName", operation));
+        }
+
+        if (from != null || to != null) {
+            RangeQueryBuilder timeRange = QueryBuilders.rangeQuery("startTimeMillis");
+            if (from != null) timeRange.gte(from);
+            if (to != null) timeRange.lte(to);
+            baseQuery.must(timeRange);
+        }
+
+        List<TraceEventDTO> results = new ArrayList<>();
+        // override size for deep scan
+        boolean done = false;
+
+        while (!done) {
+            SearchSourceBuilder source = new SearchSourceBuilder()
+                    .query(baseQuery)
+                    .from(page * size)
+                    .size(size)
+                    .sort("startTimeMillis", SortOrder.DESC);
+
+            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
+            request.source(source);
+
+            SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
+            SearchHit[] hits = response.getHits().getHits();
+
+            if (hits.length == 0) break;
+
+            for (SearchHit hit : hits) {
+                Map<String, Object> src = hit.getSourceAsMap();
+                String traceIdHit = (String) src.get("traceID");
+                String op = (String) src.get("operationName");
+                long startTime = ((Number) src.get("startTimeMillis")).longValue();
+                long duration = ((Number) src.get("duration")).longValue();
+
+                Map<String, String> tags = extractTags((List<Map<String, Object>>) src.get("tags"));
+                Map<String, String> details = traceDetailsExtractor.extract(op, tags);
+
+                if (status != null && !status.equalsIgnoreCase(details.get("status"))) {
+                    continue;
+                }
+
+                results.add(TraceEventDTO.builder()w
+                        .traceId(traceIdHit)
+                        .operation(op)
+                        .startTime(startTime)
+                        .duration(duration)
+                        .details(details)
+                        .build());
+            }
+
+            page++;
+        }
+
+        return results;
+    }
+
+    private Map<String, String> extractTags(List<Map<String, Object>> tagsList) {
+        return tagsList.stream().collect(Collectors.toMap(
+                tag -> (String) tag.get("key"),
+                tag -> tag.get("value").toString(),
+                (a, b) -> b));
+    }
+
+    public long countTraces(String operation, Long from, Long to, String status) throws IOException {
+        int pageSize = 500;
+        int page = 0;
+        long totalCount = 0;
+        boolean done = false;
+
+        while (!done) {
+            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
+
+            BoolQueryBuilder query = QueryBuilders.boolQuery();
+            if (operation != null && !operation.isBlank()) {
+                query.must(QueryBuilders.matchQuery("operationName", operation));
+            }
+            if (from != null || to != null) {
+                RangeQueryBuilder timeRange = QueryBuilders.rangeQuery("startTimeMillis");
+                if (from != null) timeRange.gte(from);
+                if (to != null) timeRange.lte(to);
+                query.must(timeRange);
+            }
+
+            SearchSourceBuilder source = new SearchSourceBuilder()
+                    .query(query)
+                    .size(pageSize)
+                    .from(page * pageSize);
+
+            request.source(source);
+            SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
+            SearchHit[] hits = response.getHits().getHits();
+
+            if (hits.length == 0) {
+                done = true;
+            }
+
+            for (SearchHit hit : hits) {
+                Map<String, Object> src = hit.getSourceAsMap();
+                String op = (String) src.get("operationName");
+                Map<String, String> tags = extractTags((List<Map<String, Object>>) src.get("tags"));
+                Map<String, String> details = traceDetailsExtractor.extract(op, tags);
+                String computedStatus = details.get("status");
+                if (status == null || status.equalsIgnoreCase(computedStatus)) {
+                    totalCount++;
+                }
+            }
+
+            page++;
+        }
+
+        return totalCount;
+    }
+
+    public List<TraceEventDTO> findTracesByTraceId(String traceId) throws IOException {
+        int pageSize = 500;
+        int page = 0;
+        boolean done = false;
+
+        List<TraceEventDTO> results = new ArrayList<>();
+
+        while (!done) {
+
+            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
+
+            BoolQueryBuilder query = QueryBuilders.boolQuery()
+                    .must(QueryBuilders.matchQuery("traceID", traceId));
+
+            SearchSourceBuilder source = new SearchSourceBuilder()
+                    .query(query)
+                    .size(pageSize)
+                    .from(page * pageSize); // assume a trace has <1000 spans; paginate if more
+
+            request.source(source);
+            SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
+
+            SearchHit[] hits = response.getHits().getHits();
+
+            if (hits.length == 0) {
+                done = true;
+            }
+
+
+            for (SearchHit hit : response.getHits()) {
+                Map<String, Object> src = hit.getSourceAsMap();
+                String op = (String) src.get("operationName");
+                long startTime = ((Number) src.get("startTimeMillis")).longValue();
+                long duration = ((Number) src.get("duration")).longValue();
+                Map<String, String> tags = extractTags((List<Map<String, Object>>) src.get("tags"));
+                Map<String, String> details = traceDetailsExtractor.extract(op, tags);
+
+                results.add(TraceEventDTO.builder()
+                        .traceId(traceId)
+                        .operation(op)
+                        .startTime(startTime)
+                        .duration(duration)
+                        .details(details)
+                        .build());
+            }
+
+            page++;
+        }
+
+        return results;
+    }
+
+    public List<String> getUniqueUris() throws IOException {
+        int pageSize = 500;
+        int page = 0;
+        boolean done = false;
+
+        Set<String> uris = new HashSet<>();
+
+        while (!done) {
+            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
+
+            BoolQueryBuilder query = QueryBuilders.boolQuery()
+                    .should(QueryBuilders.matchQuery("operationName", "CLC"))
+                    .should(QueryBuilders.matchQuery("operationName", "IDB"))
+                    .minimumShouldMatch(1);
+
+            SearchSourceBuilder source = new SearchSourceBuilder()
+                    .query(query)
+                    .from(page * pageSize)
+                    .size(pageSize)
+                    .fetchSource(new String[]{"tags"}, null);
+
+            request.source(source);
+            SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
+
+            SearchHit[] hits = response.getHits().getHits();
+            if (hits.length == 0) {
+                done = true;
+            }
+
+            for (SearchHit hit : hits) {
+                Map<String, Object> src = hit.getSourceAsMap();
+                Map<String, String> tags = extractTags((List<Map<String, Object>>) src.get("tags"));
+                String uri = tags.get("request.uri");
+                if (uri != null && !uri.equals("/tpgroup/ws/clc") && !uri.equals("/tpgroup/ws/idb")) {
+                    uris.add(uri);
+                }
+            }
+
+            page++;
+        }
+
+        return uris.stream().sorted().collect(Collectors.toList());
+    }
+
+
+    public Map<String, Map<String, Object>> getUriPassFailDetails() throws IOException {
+        int pageSize = 500;
+        int page = 0;
+
+        Map<String, Map<String, Object>> result = new HashMap<>();
+
+        long totalHits = -1;
+        while (true) {
+            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
+
+            BoolQueryBuilder query = QueryBuilders.boolQuery()
+                    .should(QueryBuilders.matchQuery("operationName", "CLC"))
+                    .should(QueryBuilders.matchQuery("operationName", "IDB"))
+                    .minimumShouldMatch(1);
+
+            SearchSourceBuilder source = new SearchSourceBuilder()
+                    .query(query)
+                    .from(page * pageSize)
+                    .size(pageSize)
+                    .fetchSource(new String[] { "traceID", "startTimeMillis", "tags", "operationName" }, null);
+
+            request.source(source);
+            SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
+            SearchHit[] hits = response.getHits().getHits();
+
+            if (totalHits == -1) {
+                totalHits = response.getHits().getTotalHits().value;
+            }
+
+            for (SearchHit hit : hits) {
+                Map<String, Object> src = hit.getSourceAsMap();
+                Map<String, String> tags = extractTags((List<Map<String, Object>>) src.get("tags"));
+                String uri = tags.get("request.uri");
+
+                if (uri == null || uri.equals("/tpgroup/ws/clc") || uri.equals("/tpgroup/ws/idb")) continue;
+
+                boolean isPass = "Retour OK".equals(tags.get("response.fault.string")) && "0".equals(tags.get("status.code"));
+
+                Map<String, Object> uriData = result.computeIfAbsent(uri, k -> {
+                    Map<String, Object> m = new HashMap<>();
+                    m.put("pass", 0L);
+                    m.put("fail", 0L);
+                    m.put("failures", new ArrayList<Map<String, Object>>());
+                    return m;
+                });
+
+                if (isPass) {
+                    uriData.put("pass", (Long) uriData.get("pass") + 1);
+                } else {
+                    uriData.put("fail", (Long) uriData.get("fail") + 1);
+                    Map<String, Object> failureDetails = new HashMap<>();
+                    failureDetails.put("traceID", src.get("traceID"));
+                    failureDetails.put("timestamp", src.get("startTimeMillis"));
+                    failureDetails.put("faultString", tags.get("response.fault.string"));
+                    ((List<Map<String, Object>>) uriData.get("failures")).add(failureDetails);
+                }
+            }
+
+            page++;
+
+            if (((long) page * pageSize) >= totalHits) break;
+        }
+
+        return result;
+    }
+}

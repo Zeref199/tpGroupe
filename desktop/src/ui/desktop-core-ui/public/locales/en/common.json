@@ -1,0 +1,7 @@
+{
+  "landingPage": {
+    "hello" :"Hello",
+    "noFavStartLabel": "In the menu you can choose your favorites",
+    "noFavEndLabel": ". You can then find them on this page !"
+  }
+}

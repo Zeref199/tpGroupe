@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge"/>
+    <title>Home Page</title>
+</head>
+<body>
+
+<div id="app"></div>
+<script>
+<!-- Add trailing slash at the end of url location to fix resources access -->
+if (!window.location.pathname.match('/$') && !window.location.pathname.match('index\.html$')) {
+   window.location.pathname = window.location.pathname+'/';
+}
+</script>
+</body>
+</html>

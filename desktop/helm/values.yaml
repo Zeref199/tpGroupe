@@ -1,0 +1,8 @@
+global:
+  socleCode: Application
+  serviceCode: desktop
+  deployment:
+    annotations:
+      reloader.stakater.com/auto: "true"
+  vault:
+    enabled: true

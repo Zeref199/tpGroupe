@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "title": "Création d'un nouveau calendrier",
+  "description": "Evènement émis lorsqu'un nouveau calendrier est créé",
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Identifiant du calendrier"
+    }
+  },
+  "required": [
+    "id"
+  ],
+  "$id": "Application.desktop.delete.calendar.event/0.0.1"
+}
