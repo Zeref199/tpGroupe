@@ -92,7 +92,7 @@ public class TraceDetailsExtractor {
 
         if (isFailure) {
             String xmlReason = extractXmlValue(res,
-                    "Body","Fault","Reason","Text");
+                    "Body","Fault","Reason","Text","__text");
             String failureReason =
                     !xmlReason.isBlank() ? xmlReason : faultStr;
             info.put("failure.reason", failureReason);

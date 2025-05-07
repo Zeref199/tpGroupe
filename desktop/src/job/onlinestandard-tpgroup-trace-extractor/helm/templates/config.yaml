@@ -1,0 +1,30 @@
+{{- if .Values.global }}
+{{- if or (.Values.instanceEnv) (.Values.global.instanceEnv) (.Values.env) (.Values.global.env) }}
+{{- $mergedMap := dict }}
+{{- with .Values.instanceEnv }}
+  {{- $mergedMap = merge $mergedMap . }}
+{{- end }}
+{{- with .Values.global.instanceEnv }}
+  {{- $mergedMap = merge $mergedMap . }}
+{{- end }}
+{{- with .Values.env }}
+  {{- $mergedMap = merge $mergedMap . }}
+{{- end }}
+{{- with .Values.global.env }}
+  {{- $mergedMap = merge $mergedMap . }}
+{{- end }}
+{{- if $mergedMap }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "helm-chart-beyond-common.generics.fullname" . }}
+  labels:
+    {{- include "helm-chart-beyond-common.generics.labels" . | nindent 4 }}
+  annotations:
+    {{- include "helm-chart-beyond-common.generics.globalAnnotations" . | nindent 4 }}
+data:
+  {{- toYaml $mergedMap | nindent 2}}
+{{- end }}
+{{- end }}
+{{- end }}

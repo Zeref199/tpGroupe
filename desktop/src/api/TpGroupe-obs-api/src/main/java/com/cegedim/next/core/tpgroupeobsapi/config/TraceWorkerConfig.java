@@ -9,6 +9,6 @@ import org.springframework.context.annotation.Configuration;
 public class TraceWorkerConfig {
     @Bean
     public TraceDetailsExtractor traceDetailsExtractor() {
-        return new TraceDetailsExtractor(new XmlMapper());
+        return new TraceDetailsExtractor();
     }
 }

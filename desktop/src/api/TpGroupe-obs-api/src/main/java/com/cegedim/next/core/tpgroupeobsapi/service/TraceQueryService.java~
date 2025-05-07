@@ -246,16 +246,12 @@ public class TraceQueryService {
                     uriData.put("pass", (Long)uriData.get("pass") + 1);
                 } else {
                     uriData.put("fail", (Long)uriData.get("fail") + 1);
-
                     Map<String,Object> failure = new HashMap<>();
                     failure.put("traceID",       srcMap.get("traceID"));
-                    // pull these _from_ the details map, not the top‐level srcMap
-                    failure.put("NumPS",         details.get("request.num.ps"));
-                    failure.put("NumAMC",        details.get("request.num.amc"));
-                    failure.put("failureReason", details.get("failure.reason"));
-
-                    ((List<Map<String,Object>>)uriData.get("failures"))
-                            .add(failure);
+                    failure.put("NumPS", srcMap.get("request.num.ps"));
+                    failure.put("NumAMC", srcMap.get("request.num.amc"));
+                    failure.put("failureReason", srcMap.get("failure.reason"));
+                    ((List<Map<String,Object>>)uriData.get("failures")).add(failure);
                 }
             }
 

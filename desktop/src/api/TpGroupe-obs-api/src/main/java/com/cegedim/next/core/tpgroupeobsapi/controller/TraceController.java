@@ -22,49 +22,33 @@ public class TraceController {
     @GetMapping("/traces")
     public ResponseEntity<List<TraceEventDTO>> getTraces(
             @RequestParam(required = false) String operation,
+            @RequestParam(required = false) String traceId,
             @RequestParam(required = false) Long from,
             @RequestParam(required = false) Long to,
             @RequestParam(required = false) String status,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) throws IOException {
 
-        return ResponseEntity.ok(traceQueryService.getTraces(operation, from, to, page, size, status));
+        return ResponseEntity.ok(traceQueryService.getTraces(operation, traceId, from, to, page, size, status));
 
-    }
-
-    @GetMapping("/traces/by-trace-id/{traceId}")
-    public ResponseEntity<List<TraceEventDTO>> getTracesByTraceId(@PathVariable String traceId) throws IOException {
-        return ResponseEntity.ok(traceQueryService.findTracesByTraceId(traceId));
     }
 
     @GetMapping("/traces/count")
-    public ResponseEntity<?> countTraces(
+    public long countTraces(
             @RequestParam(required = false) String operation,
             @RequestParam(required = false) Long from,
             @RequestParam(required = false) Long to,
             @RequestParam(required = false) String status
-    ) {
-        try {
-            long count = traceQueryService.countTraces(operation, from, to, status);
-            return ResponseEntity.ok(count);
-        } catch (ElasticsearchStatusException ese) {
-            // Detect circuit breaker error
-            if (ese.getMessage().contains("circuit_breaking_exception")) {
-                return ResponseEntity.badRequest()
-                        .body(Map.of("error", "Too much data requested. Please reduce the time range."));
-            }
-            throw ese;
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Internal server error."));
-        }
+    ) throws IOException {
+        return traceQueryService.countTraces(operation, from, to, status);
     }
+
+
 
     @GetMapping("/uris")
     public ResponseEntity<List<String>> getUniqueUris() throws IOException {
         return ResponseEntity.ok(traceQueryService.getUniqueUris());
     }
-
 
     @GetMapping("/uris/details")
     public ResponseEntity<Map<String, Map<String, Object>>> getUniqueUrisdetails() throws IOException {

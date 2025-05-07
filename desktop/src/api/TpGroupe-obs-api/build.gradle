@@ -24,6 +24,8 @@ dependencies {
 
 	implementation 'org.springframework.boot:spring-boot-starter:2.6.6'
 	implementation 'org.springframework.boot:spring-boot-starter-actuator:2.6.6'
+	implementation 'javax.xml.stream:stax-api:1.0-2'
+	implementation("com.fasterxml.woodstox:woodstox-core:7.1.0")
 
 
 	implementation 'org.springframework.boot:spring-boot-starter-web'

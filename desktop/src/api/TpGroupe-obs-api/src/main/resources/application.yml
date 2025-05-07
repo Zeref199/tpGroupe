@@ -2,12 +2,35 @@ spring:
   application:
     name: TpGroupe-obs-api
 
+# ── Production OpenSearch (read-only) ────────────────────────────────────────────
 elasticsearch:
   host: beyond-log-prod.es.cegedim.cloud
   port: 443
   scheme: https
   user: admin
   pass: mVC%w=EzLo3+
+
+storage:
+  type: elasticsearch
+  elasticsearch:
+    host: localhost
+    port: 9200
+    scheme: http
+    user: ""          # remove or leave blank if no auth
+    password: ""      # remove or leave blank if no auth
+    indexPrefix: dev-dev
+
+# ── Local OpenSearch (for enriched traces) ──────────────────────────────────────
+local:
+  elasticsearch:
+    host: localhost        # Docker container mapped port
+    port: 9200             # as in your docker-compose.yml
+    scheme: http           # default http for local
+
+# ── Ingestion polling configuration ────────────────────────────────────────────
+poll:
+  delay:
+    ms: 30000              # how often (in ms) to poll for new spans
 
 management:
   health:
