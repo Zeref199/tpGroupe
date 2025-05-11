@@ -7,7 +7,7 @@
     "cp:themes": "copy node_modules\\common-uitoolkit-beyond\\dist\\css\\beyond-theme-base.css public\\theme-base.css && copy node_modules\\common-uitoolkit-beyond\\dist\\css\\beyond-theme-dark.css public\\theme-dark.css && copy node_modules\\common-uitoolkit-beyond\\dist\\css\\beyond-theme-ai7.css public\\theme-ai7.css && copy node_modules\\common-uitoolkit-desktop\\dist\\beyond_logo.png public\\beyond_logo.png",
     "start": "npm run && craco -r @cypress/instrument-cra start",
     "start:it": "cross-env targetEnv=it targetCluster=dev npm start",
-    "startNoKeycloak": "cross-env keycloakEnabled=false authorizationEnabled=false PORT=3000 npm start",
+    "startNoKeycloak": "cross-env keycloakEnabled=false authorizationEnabled=false PORT=3001 npm start",
     "startHttpServer": "envsub --env authorization_enabled=false --env keycloak_enabled=false ./configuration.json ./build/configuration && cross-env PORT=3000 serve -n build/",
     "build.prod": "npm run cp:themes && craco build",
     "build.instrument": "npm run cp:themes && cross-env BUILD_PATH='./build-instrument' CYPRESS_INSTRUMENT_PRODUCTION=true craco -r @cypress/instrument-cra build",
@@ -61,6 +61,7 @@
     "redux": "3.6.0",
     "redux-promise-middleware": "4.2.0",
     "redux-thunk": "2.2.0",
+    "redux-form": "7.4.2",
     "restful.js": "0.9.6",
     "uuid-random": "1.3.2",
     "whatwg-fetch": "2.0.3"

@@ -50,6 +50,8 @@ public class TraceQueryService {
     public List<TraceEventDTO> getTraces(
             String operation,
             String traceId,
+            String numPs,
+            String numAMC,
             Long from,
             Long to,
             int page,
@@ -75,6 +77,14 @@ public class TraceQueryService {
 
         if (status != null && !status.isBlank()) {
             query.must(QueryBuilders.matchQuery("details.status", status));
+        }
+
+        if (numPs != null && !numPs.isBlank()) {
+            query.must(QueryBuilders.matchQuery("details.request.num.ps", numPs));
+        }
+
+        if (numAMC != null && !numAMC.isBlank()) {
+            query.must(QueryBuilders.matchQuery("details.request.num.amc", numAMC));
         }
 
         SearchSourceBuilder src = new SearchSourceBuilder()

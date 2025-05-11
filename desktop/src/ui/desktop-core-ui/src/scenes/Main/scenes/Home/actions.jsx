@@ -21,19 +21,17 @@ import Api from '../../../../common/resources/Api';
 /* ********   PUBLIC FUNCTIONS  ******** */
 /* ************************************* */
 
-export function fetchTraces({ page = 0, size = 10, operation = '', from, to } = {}) {
+export function fetchTraces({ page, size = 10, operation = '', from, to,  status   = '', traceId, numPS, numAMC } = {}) {
     return async dispatch => {
         dispatch({ type: types.FETCH_TRACES_PENDING.type });
 
         try {
             const response = await Api.all('traces')
-                .getAll({ page, size, operation, from, to});
-
+                .getAll({ page, size, operation, from, to, status, traceId, numPS, numAMC});
 
             const traces = Array.isArray(response.body())
                 ? response.body().map(resource => resource.data())
                 : [];
-
 
             dispatch({
                 type: types.FETCH_TRACES_FULFILLED.type,

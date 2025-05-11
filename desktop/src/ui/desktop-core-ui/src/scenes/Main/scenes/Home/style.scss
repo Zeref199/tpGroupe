@@ -77,3 +77,43 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
 }
+
+.time-range-picker {
+    display: flex;
+    align-items: flex-end;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+
+    margin-left: auto;
+}
+
+/* Space every child evenly */
+.time-range-picker > * + * {
+    margin-left: 1rem;
+}
+
+/* force both pickers the same width */
+.time-range-picker .trp-input {
+    flex: 0 0 200px;
+}
+
+/* Allow button to size naturally */
+.time-range-picker .trp-button {
+    flex: 0 0 auto;
+}
+
+.refresh-div-style{
+    display: flex;
+    align-items: flex-end;
+    padding: 0.75rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+
+    margin-left: auto;
+}
+
+.refresh-div-style .trp-button {
+    flex: 0 0 auto;
+}
+

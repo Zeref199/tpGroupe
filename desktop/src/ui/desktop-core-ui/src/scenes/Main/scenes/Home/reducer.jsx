@@ -4,7 +4,6 @@ const initialState = {
     menuLoading: false,
     traces: [],
     loading: false,
-    total: 0
 };
 
 function reducer(state = initialState, action) {

@@ -1,0 +1,32 @@
+import React from 'react';
+import { Field, Row, Col, Button, ReduxInput } from '@beyond-framework/common-uitoolkit-beyond';
+import { CgIcon } from '@beyond-framework/common-uitoolkit-icons';
+
+export function TraceFilteringFields({ reset }) {
+    return (
+        <Row className="d-flex align-items-end">
+            <Col xs="4">
+                <Field
+                    name="traceId"
+                    label="Trace ID"
+                    component={ReduxInput}
+                    edit
+                />
+            </Col>
+            <Col className="d-flex align-items-end">
+                <Button
+                    type="button"
+                    behavior="secondary"
+                    outline
+                    onClick={() => reset()}
+                    className="mr-2"
+                >
+                    <CgIcon name="undo" />
+                </Button>
+                <Button type="submit" behavior="primary">
+                    Filtrer
+                </Button>
+            </Col>
+        </Row>
+    );
+}

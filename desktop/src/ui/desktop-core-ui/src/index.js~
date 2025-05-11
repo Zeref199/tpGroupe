@@ -34,10 +34,6 @@ const render = () => {
     );
 };
 
-if (typeof HTMLCollection !== 'undefined' && !HTMLCollection.prototype.forEach) {
-    HTMLCollection.prototype.forEach = Array.prototype.forEach;
-}
-
 AuthProvider.init(status => {
     if (!status.error || status.error === 'Keycloak is not enabled') {
         render();

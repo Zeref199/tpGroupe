@@ -1,0 +1,33 @@
+import React from 'react';
+import { Field,Row, Col, Button, ReduxInput } from '@beyond-framework/common-uitoolkit-beyond';
+import { CgIcon } from '@beyond-framework/common-uitoolkit-icons';
+
+export function TraceFilteringFields({ reset }) {
+    return (
+        <Row className="d-flex justify-content-center align-items-center">
+            <Col xs="3">
+                <Field name="firstName" label="Prénom" component={ReduxInput} edit />
+            </Col>
+            <Col xs="3">
+                <Field name="lastName" label="Nom" component={ReduxInput} edit />
+            </Col>
+            <Col className="d-flex align-items-end justify-content-start">
+                <Button type="button" behavior="secondary" outline onClick={reset} className="mr-2">
+                    <CgIcon name="undo" />
+                </Button>
+                <Button type="submit" behavior="primary">
+                    Filtrer
+                </Button>
+            </Col>
+        </Row>
+    );
+}
+const FilteringForm = filteringWrapper({ form: 'FILTERING_WRAPPER_EXAMPLE_2' })(FilteringFieldsComponent);
+return (
+    <FilteringForm
+        onSubmit={(data, props) => {
+            alert(JSON.stringify({ data, props }));
+        }}
+    />
+);
+}

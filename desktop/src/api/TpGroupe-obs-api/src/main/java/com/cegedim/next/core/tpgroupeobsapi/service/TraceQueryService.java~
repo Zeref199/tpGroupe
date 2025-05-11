@@ -50,6 +50,8 @@ public class TraceQueryService {
     public List<TraceEventDTO> getTraces(
             String operation,
             String traceId,
+            String numPs,
+            String numAMC,
             Long from,
             Long to,
             int page,
@@ -75,6 +77,14 @@ public class TraceQueryService {
 
         if (status != null && !status.isBlank()) {
             query.must(QueryBuilders.matchQuery("details.status", status));
+        }
+
+        if (numPs != null && !numPs.isBlank()) {
+            query.must(QueryBuilders.matchQuery("request.num.ps", numPs));
+        }
+
+        if (numAMC != null && !numAMC.isBlank()) {
+            query.must(QueryBuilders.matchQuery("request.num.amc", numAMC));
         }
 
         SearchSourceBuilder src = new SearchSourceBuilder()
@@ -246,12 +256,16 @@ public class TraceQueryService {
                     uriData.put("pass", (Long)uriData.get("pass") + 1);
                 } else {
                     uriData.put("fail", (Long)uriData.get("fail") + 1);
+
                     Map<String,Object> failure = new HashMap<>();
                     failure.put("traceID",       srcMap.get("traceID"));
-                    failure.put("NumPS", srcMap.get("request.num.ps"));
-                    failure.put("NumAMC", srcMap.get("request.num.amc"));
-                    failure.put("failureReason", srcMap.get("failure.reason"));
-                    ((List<Map<String,Object>>)uriData.get("failures")).add(failure);
+                    // pull these _from_ the details map, not the top‐level srcMap
+                    failure.put("NumPS",         details.get("request.num.ps"));
+                    failure.put("NumAMC",        details.get("request.num.amc"));
+                    failure.put("failureReason", details.get("failure.reason"));
+
+                    ((List<Map<String,Object>>)uriData.get("failures"))
+                            .add(failure);
                 }
             }
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Row, Col, DatePicker2, Button, Dropdown2, DropdownItem2 } from '@beyond-framework/common-uitoolkit-beyond';
-import { add, sub } from 'date-fns';
+import { DatePicker2, Button, Dropdown2, DropdownItem2 } from '@beyond-framework/common-uitoolkit-beyond';
+import { sub } from 'date-fns';
 
 const quickRanges = [
     { label: 'Last 5 minutes', offset: { minutes: 5 } },
@@ -15,11 +15,20 @@ const quickRanges = [
 export default function TimeRangePicker({ onApply }) {
     const [from, setFrom] = useState(null);
     const [to, setTo] = useState(null);
+    const [applied, setApplied] = useState(false);
 
-    const handleApply = () => {
-        const fromTimestamp = from instanceof Date && !isNaN(from) ? from.getTime() : null;
-        const toTimestamp = to instanceof Date && !isNaN(to) ? to.getTime() : null;
-        onApply(fromTimestamp, toTimestamp);
+    const handleToggle = () => {
+        if (!applied) {
+            // APPLY
+            onApply(from, to);
+            setApplied(true);
+        } else {
+            // DISABLE
+            setFrom(null);
+            setTo(null);
+            onApply(null, null);
+            setApplied(false);
+        }
     };
 
     const handleQuickRange = (offsetObj) => {
@@ -27,26 +36,42 @@ export default function TimeRangePicker({ onApply }) {
         const newTo = new Date();
         setFrom(newFrom);
         setTo(newTo);
+        setApplied(false);
     };
 
     return (
-        <div style={{ marginBottom: '1rem', padding: '0.5rem', border: '1px solid #ccc' }}>
-            <Row>
-                <Col md={4}>
-                    <DatePicker2 id="from" placeholderText="From" selected={from} onChange={(date) => setFrom(date)} showTimeInput
-                                 timeIntervals={15}
-                                 dateFormat="dd/MM/yyyy HH:mm" isClearable />
-                </Col>
-                <Col md={4}>
-                    <DatePicker2 id="to" placeholderText="To" selected={to} onChange={(date) => setTo(date)} showTimeInput timeIntervals={15}
-                                 dateFormat="dd/MM/yyyy HH:mm" isClearable />
-                </Col>
-                <Col md={4} className="d-flex align-items-end">
-                    <Button onClick={handleApply}>Apply time range</Button>
-                </Col>
-            </Row>
-            <Row className="mt-3">
-                <Col md={6}>
+        <div className="time-range-picker">
+                    <DatePicker2
+                        id="from"
+                        placeholderText="From"
+                        selected={from}
+                        onChange={date => { setFrom(date); setApplied(false); }}
+                        showTimeInput
+                        className="trp-input"
+                        timeIntervals={15}
+                        dateFormat="dd/MM/yyyy HH:mm"
+                        isClearable
+                    />
+
+                    <DatePicker2
+                        id="to"
+                        placeholderText="To"
+                        selected={to}
+                        onChange={(date) => {setTo(date); setApplied(false);}}
+                        showTimeInput
+                        className="trp-input"
+                        timeIntervals={15}
+                        dateFormat="dd/MM/yyyy HH:mm"
+                        isClearable />
+
+                    <Button
+                        onClick={handleToggle}
+                        className="trp-button"
+                        disabled={!applied && (!from || !to)}  // when “Apply”, require both dates
+                    >
+                        {applied ? 'Disable time range' : 'Apply time range'}
+                    </Button>
+
                     <Dropdown2 id="quick-ranges" label="Quick Ranges">
                         {quickRanges.map(({ label, offset }) => (
                             <DropdownItem2
@@ -57,8 +82,7 @@ export default function TimeRangePicker({ onApply }) {
                             />
                         ))}
                     </Dropdown2>
-                </Col>
-            </Row>
+
         </div>
     );
 }

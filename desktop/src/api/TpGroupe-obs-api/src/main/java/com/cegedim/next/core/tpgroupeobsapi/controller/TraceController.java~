@@ -26,12 +26,12 @@ public class TraceController {
             @RequestParam(required = false) Long from,
             @RequestParam(required = false) Long to,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) String numPS,
+            @RequestParam(required = false) String numPs,
             @RequestParam(required = false) String numAMC,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) throws IOException {
 
-        return ResponseEntity.ok(traceQueryService.getTraces(operation, traceId, numPS, numAMC, from, to, page, size, status));
+        return ResponseEntity.ok(traceQueryService.getTraces(operation, traceId, numPs, numAMC, from, to, page, size, status));
 
     }
 
