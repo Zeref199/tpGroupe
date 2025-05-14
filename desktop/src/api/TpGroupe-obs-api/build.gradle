@@ -26,9 +26,11 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-actuator:2.6.6'
 	implementation 'javax.xml.stream:stax-api:1.0-2'
 	implementation("com.fasterxml.woodstox:woodstox-core:7.1.0")
+	implementation 'org.postgresql:postgresql:42.6.0'
 
 
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
 	implementation 'com.fasterxml.jackson.core:jackson-core:2.16.1'
 	implementation 'com.fasterxml.jackson.core:jackson-databind:2.16.1'

@@ -1,7 +1,9 @@
 package com.cegedim.next.core.tpgroupeobsapi.service;
 
 import com.cegedim.next.core.tpgroupeobsapi.dto.TraceEventDTO;
+import com.cegedim.next.core.tpgroupeobsapi.entity.ServiceProvider;
 import com.cegedim.next.core.tpgroupeobsapi.helpers.TraceDetailsExtractor;
+import com.cegedim.next.core.tpgroupeobsapi.repository.ServiceProviderRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +21,12 @@ import org.elasticsearch.index.query.RangeQueryBuilder;
 import org.elasticsearch.search.Scroll;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.aggregations.AggregationBuilders;
+import org.elasticsearch.search.aggregations.Aggregations;
+import org.elasticsearch.search.aggregations.bucket.composite.CompositeAggregationBuilder;
+import org.elasticsearch.search.aggregations.bucket.composite.ParsedComposite;
+import org.elasticsearch.search.aggregations.bucket.composite.TermsValuesSourceBuilder;
 import org.elasticsearch.search.aggregations.bucket.terms.Terms;
+import org.elasticsearch.search.aggregations.bucket.terms.TermsAggregationBuilder;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -30,20 +37,26 @@ import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.elasticsearch.index.query.QueryBuilders.termsQuery;
+import static org.elasticsearch.search.aggregations.AggregationBuilders.terms;
+
 @Service
 @Slf4j
 public class TraceQueryService {
 
     private final RestHighLevelClient esClient;
     private final String indexPattern;
+    private final ServiceProviderRepository providerRepo;
 
     public TraceQueryService(
             @Qualifier("devEsClient") RestHighLevelClient esClient,
-            @Value("${storage.elasticsearch.indexPrefix}") String indexPrefix
+            @Value("${storage.elasticsearch.indexPrefix}") String indexPrefix,
+            ServiceProviderRepository providerRepo
     ) {
         this.esClient      = esClient;
         // wildcard over your enriched index, e.g. "dev-dev-traces*"
         this.indexPattern  = indexPrefix + "-traces*";
+        this.providerRepo  = providerRepo;
     }
 
 
@@ -56,9 +69,15 @@ public class TraceQueryService {
             Long to,
             int page,
             int size,
-            String status
+            String status,
+            String direction
     ) throws IOException {
         BoolQueryBuilder query = QueryBuilders.boolQuery();
+        List<String> internalOps = List.of(
+                "ServiceProviderInitialize",
+                "ServiceProviderSubscribe",
+                "ServiceProviderUnsubscribe"
+        );
 
         if (operation != null && !operation.isBlank()) {
             query.must(QueryBuilders.matchQuery("operation", operation));
@@ -86,6 +105,15 @@ public class TraceQueryService {
         if (numAMC != null && !numAMC.isBlank()) {
             query.must(QueryBuilders.matchQuery("details.request.num.amc", numAMC));
         }
+
+        if ("inbound".equals(direction)) {
+            query.must(QueryBuilders.prefixQuery("details.request.uri.keyword", "/tpgroup/ws/"));
+        } else if ("outbound".equals(direction)) {
+            query.mustNot(QueryBuilders.prefixQuery("details.request.uri.keyword", "/tpgroup/ws/"));
+        } else if ("internal".equals(direction)) {
+            query.must(QueryBuilders.termsQuery("operation.keyword", internalOps));
+        }
+
 
         SearchSourceBuilder src = new SearchSourceBuilder()
                 .query(query)
@@ -193,7 +221,6 @@ public class TraceQueryService {
                 }
             }
 
-            // Prepare the cursor for the next page
             lastSort = Arrays.asList(hits[hits.length - 1].getSortValues());
         }
 
@@ -206,7 +233,6 @@ public class TraceQueryService {
         Map<String, Map<String, Object>> result = new HashMap<>();
 
         while (true) {
-            // 1) Build the paged search_after query
             SearchSourceBuilder src = new SearchSourceBuilder()
                     .query(QueryBuilders.boolQuery()
                             .should(QueryBuilders.matchQuery("operation", "CLC"))
@@ -221,7 +247,6 @@ public class TraceQueryService {
                 src.searchAfter(lastSort.toArray());
             }
 
-            // 2) Execute
             SearchRequest req = new SearchRequest(indexPattern);
             req.source(src).setMaxConcurrentShardRequests(1);
             SearchResponse resp = esClient.search(req, RequestOptions.DEFAULT);
@@ -276,70 +301,71 @@ public class TraceQueryService {
         return result;
     }
 
+    public Map<String, ServiceProvider> getUniquePSWithDetails(Long from, Long to) throws IOException {
+        List<String> uniquePs = getUniquePS(from, to);
 
-//    public Map<String, Map<String, Object>> getUriPassFailDetails() throws IOException {
-//        int pageSize = 500;
-//        int page = 0;
-//
-//        Map<String, Map<String, Object>> result = new HashMap<>();
-//
-//        long totalHits = -1;
-//        while (true) {
-//            SearchRequest request = new SearchRequest("rp00-es14-jaeger-span-*");
-//
-//            BoolQueryBuilder query = QueryBuilders.boolQuery()
-//                    .should(QueryBuilders.matchQuery("operationName", "CLC"))
-//                    .should(QueryBuilders.matchQuery("operationName", "IDB"))
-//                    .minimumShouldMatch(1);
-//
-//            SearchSourceBuilder source = new SearchSourceBuilder()
-//                    .query(query)
-//                    .from(page * pageSize)
-//                    .size(pageSize)
-//                    .fetchSource(new String[] { "traceID", "startTimeMillis", "tags", "operationName" }, null);
-//
-//            request.source(source);
-//            SearchResponse response = esClient.search(request, RequestOptions.DEFAULT);
-//            SearchHit[] hits = response.getHits().getHits();
-//
-//            if (totalHits == -1) {
-//                totalHits = response.getHits().getTotalHits().value;
-//            }
-//
-//            for (SearchHit hit : hits) {
-//                Map<String, Object> src = hit.getSourceAsMap();
-//                Map<String, String> tags = extractTags((List<Map<String, Object>>) src.get("tags"));
-//                String uri = tags.get("request.uri");
-//
-//                if (uri == null || uri.equals("/tpgroup/ws/clc") || uri.equals("/tpgroup/ws/idb")) continue;
-//
-//                boolean isPass = "Retour OK".equals(tags.get("response.fault.string")) && "0".equals(tags.get("status.code"));
-//
-//                Map<String, Object> uriData = result.computeIfAbsent(uri, k -> {
-//                    Map<String, Object> m = new HashMap<>();
-//                    m.put("pass", 0L);
-//                    m.put("fail", 0L);
-//                    m.put("failures", new ArrayList<Map<String, Object>>());
-//                    return m;
-//                });
-//
-//                if (isPass) {
-//                    uriData.put("pass", (Long) uriData.get("pass") + 1);
-//                } else {
-//                    uriData.put("fail", (Long) uriData.get("fail") + 1);
-//                    Map<String, Object> failureDetails = new HashMap<>();
-//                    failureDetails.put("traceID", src.get("traceID"));
-//                    failureDetails.put("timestamp", src.get("startTimeMillis"));
-//                    failureDetails.put("faultString", tags.get("response.fault.string"));
-//                    ((List<Map<String, Object>>) uriData.get("failures")).add(failureDetails);
-//                }
-//            }
-//
-//            page++;
-//
-//            if (((long) page * pageSize) >= totalHits) break;
-//        }
-//
-//        return result;
-//    }
+        if (uniquePs.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        List<ServiceProvider> providers = providerRepo.findAllById(uniquePs);
+
+        return providers.stream()
+                .collect(Collectors.toMap(
+                        ServiceProvider::getNationalId,
+                        sp -> sp
+                ));
+    }
+
+
+    public List<String> getUniquePS(Long from, Long to) throws IOException {
+        List<String> uniquePs = new ArrayList<>();
+
+        // 1) Build your base time‐range filter
+        BoolQueryBuilder filter = QueryBuilders.boolQuery();
+        if (from != null) filter.filter(QueryBuilders.rangeQuery("startTimeMillis").gte(from));
+        if (to   != null) filter.filter(QueryBuilders.rangeQuery("startTimeMillis").lte(to));
+
+        // 2) Composite agg definition: “ps_buckets” over our keyword field
+        CompositeAggregationBuilder compositeAgg = AggregationBuilders
+                .composite("ps_buckets",
+                        List.of(
+                                new TermsValuesSourceBuilder("ps")
+                                        .field("details.request.num.ps.keyword")
+                        )
+                )
+                .size(1000);  // page size: tweak up/down as you like
+
+        Map<String, Object> afterKey = null;
+        do {
+            // 3) On each iteration, plug in the last “afterKey” if present
+            CompositeAggregationBuilder pagedAgg = (afterKey == null)
+                    ? compositeAgg
+                    : compositeAgg.aggregateAfter(afterKey);
+
+            SearchSourceBuilder src = new SearchSourceBuilder()
+                    .query(filter)
+                    .size(0)                         // no hits, just aggs
+                    .aggregation(pagedAgg);
+
+            SearchRequest req = new SearchRequest(indexPattern)
+                    .source(src);
+
+            SearchResponse resp = esClient.search(req, RequestOptions.DEFAULT);
+
+            // 4) Pull out our composite agg
+            ParsedComposite buckets = resp.getAggregations()
+                    .get("ps_buckets");
+
+            // 5) Collect each bucket’s “ps” key
+            for (ParsedComposite.ParsedBucket bucket : buckets.getBuckets()) {
+                uniquePs.add((String) bucket.getKey().get("ps"));
+            }
+
+            // 6) Grab the “afterKey” for the next page (or null if we’re done)
+            afterKey = buckets.afterKey();
+        } while (afterKey != null);
+
+        return uniquePs;
+    }
 }

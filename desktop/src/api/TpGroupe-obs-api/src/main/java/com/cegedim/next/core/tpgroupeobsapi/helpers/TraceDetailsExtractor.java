@@ -19,16 +19,19 @@ public class TraceDetailsExtractor {
     private final XMLInputFactory xmlInputFactory = XMLInputFactory.newInstance();
 
     public Map<String, String> extract(String operation, Map<String, String> tags) {
-        Map<String, Function<Map<String, String>, Map<String, String>>> extractors = Map.of(
-                "AbonnementPS", this::extractAbonnement,
-                "IDB", this::extractSimple,
-                "CLC", this::extractSimple,
-                "DmdePratique", this::extractDmdePratique,
-                "ConventionPS", this::extractConvention,
-                "restitutionAMC", this::extractRestitution,
-                "InterAMC", this::extractInterAMC,
-                "DmdeSignature", this::extractSignature
-        );
+        Map<String, Function<Map<String, String>, Map<String, String>>> extractors = new HashMap<>();
+        extractors.put("AbonnementPS", this::extractAbonnement);
+        extractors.put("IDB", this::extractSimple);
+        extractors.put("CLC", this::extractSimple);
+        extractors.put("DmdePratique", this::extractDmdePratique);
+        extractors.put("ConventionPS", this::extractConvention);
+        extractors.put("restitutionAMC", this::extractRestitution);
+        extractors.put("InterAMC", this::extractInterAMC);
+        extractors.put("DmdeSignature", this::extractDemandeSignature);
+        extractors.put("NotifSignature", this::extractNotifSignature);
+        extractors.put("ServiceProviderInitialize", this::extractServiceProviderInitialize);
+        extractors.put("ServiceProviderSubscribe", this::extractServiceProviderSubscribe);
+        extractors.put("ServiceProviderUnsubscribe", this::extractServiceProviderUnsubscribe);
 
         try {
             return extractors.getOrDefault(operation, m -> Map.of()).apply(tags);
@@ -75,6 +78,7 @@ public class TraceDetailsExtractor {
         info.put("AckCode", ackCode);
         info.put("AckMessage", ackMessage);
         info.put("request.num.ps", tags.get("request.num.ps"));
+        info.put("request.uri", tags.get("request.uri"));
 
         boolean failed = "KO".equalsIgnoreCase(ackCode) || !"0".equals(statusCode);
         info.put("status", failed ? "FAILED" : "PASSED");
@@ -131,6 +135,7 @@ public class TraceDetailsExtractor {
         boolean failed = !"Retour OK".equalsIgnoreCase(faultString) || !"0".equals(statusCode);
         info.put("request.num.amc", tags.get("request.num.amc"));
         info.put("request.num.ps", tags.get("request.num.ps"));
+        info.put("request.uri", tags.get("request.uri"));
         info.put("status", failed ? "FAILED" : "PASSED");
         if (failed) info.put("response.fault.string", faultString);
         return info;
@@ -144,6 +149,7 @@ public class TraceDetailsExtractor {
 
         boolean failed = !"Retour OK".equalsIgnoreCase(faultString) || !"0".equals(statusCode);
         info.put("request.num.ps", tags.get("request.num.ps"));
+        info.put("request.uri", tags.get("request.uri"));
         info.put("status", failed ? "FAILED" : "PASSED");
         if (failed) {
             info.put("response.fault.string", faultString);
@@ -161,6 +167,7 @@ public class TraceDetailsExtractor {
 
         boolean failed = !"1".equals(codeRetour);
         info.put("status", failed ? "FAILED" : "PASSED");
+        info.put("request.uri", tags.get("request.uri"));
         if (failed) {
             info.put("code_retour", codeRetour);
             info.put("message", message);
@@ -168,7 +175,7 @@ public class TraceDetailsExtractor {
         return info;
     }
 
-    private Map<String, String> extractSignature(Map<String, String> tags) {
+    private Map<String, String> extractDemandeSignature(Map<String, String> tags) {
         Map<String, String> info = new HashMap<>();
         String res = tags.get("response.content");
 
@@ -178,8 +185,60 @@ public class TraceDetailsExtractor {
 
         info.put("StatusCode", extractXmlValue(res, "Body", "Simt101", "SignatureResponseUrl", "StatusCode"));
         info.put("ResultCode", extractXmlValue(res, "Body", "Simt101", "SignatureResponseUrl", "ResultCode"));
+        info.put("request.uri", tags.get("request.uri"));
         info.put("status", failed ? "FAILED" : "PASSED");
         if (failed) info.put("response.fault.string", faultString);
+        return info;
+    }
+
+    private Map<String, String> extractNotifSignature(Map<String, String> tags) {
+        Map<String, String> info = new HashMap<>();
+        String res = tags.get("response.content");
+
+        String faultString = tags.getOrDefault("response.fault.string", "");
+        String statusCode = tags.getOrDefault("status.code", "0");
+        String status = extractXmlValue(res, "Nomt201", "Status");
+        boolean failed = !"Retour OK".equalsIgnoreCase(faultString) || !"0".equals(statusCode) || !"OK".equalsIgnoreCase(status);
+
+        info.put("request.uri", tags.get("request.uri"));
+        info.put("status", failed ? "FAILED" : "PASSED");
+        if (failed) info.put("response.fault.string", faultString);
+        return info;
+    }
+
+    private Map<String, String> extractServiceProviderInitialize(Map<String, String> tags) {
+
+        Map<String, String> info = new HashMap<>();
+        String numPs = tags.get("request.num.ps");
+        String statusCode = tags.get("status.code");
+
+        boolean failed = !"0".equals(statusCode);
+        info.put("request.num.ps", numPs);
+        info.put("status", failed ? "FAILED" : "PASSED");
+        return info;
+    }
+
+    private Map<String, String> extractServiceProviderSubscribe(Map<String, String> tags) {
+
+        Map<String, String> info = new HashMap<>();
+        String numPs = tags.get("request.num.ps");
+        String statusCode = tags.get("status.code");
+
+        boolean failed = !"0".equals(statusCode);
+        info.put("request.num.ps", numPs);
+        info.put("status", failed ? "FAILED" : "PASSED");
+        return info;
+    }
+
+    private Map<String, String> extractServiceProviderUnsubscribe(Map<String, String> tags) {
+
+        Map<String, String> info = new HashMap<>();
+        String numPs = tags.get("request.num.ps");
+        String statusCode = tags.get("status.code");
+
+        boolean failed = !"0".equals(statusCode);
+        info.put("request.num.ps", numPs);
+        info.put("status", failed ? "FAILED" : "PASSED");
         return info;
     }
 }

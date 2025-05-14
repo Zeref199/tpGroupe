@@ -1,0 +1,4 @@
+package com.cegedim.next.core.tpgroupeobsapi.repository;
+
+public interface ServiceProviderRepository {
+}

@@ -4,6 +4,9 @@ const initialState = {
     menuLoading: false,
     traces: [],
     loading: false,
+
+    psList: [],
+    psLoading: false,
 };
 
 function reducer(state = initialState, action) {
@@ -35,6 +38,22 @@ function reducer(state = initialState, action) {
 
         case types.FETCH_TRACES_REJECTED.type:
             return { ...state, traces: [], loading: false };
+
+        case types.FETCH_PS_PENDING.type:
+            return { ...state,
+                psLoading: true,
+                psError: null  };
+
+        case types.FETCH_PS_FULFILLED.type:
+            return { ...state,
+                psLoading: false,
+                psList: action.payload.psList, };
+
+        case types.FETCH_PS_REJECTED.type:
+            return { ...state,
+                psLoading: false,
+                psList: [],
+                psError: action.error };
 
         default:
             return state;

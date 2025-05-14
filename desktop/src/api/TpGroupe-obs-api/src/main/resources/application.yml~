@@ -1,11 +1,6 @@
 spring:
   application:
     name: TpGroupe-obs-api
-  datasource:
-    url: jdbc:postgresql://beyond-pg-preprod.pg.cegedim.cloud:5432/onlinestandard-tpgroup-api-rh00-es14
-    username: admin
-    password: "eXc3llent@P@ssw0rd!"
-    driver-class-name: org.postgresql.Driver
 
 server:
   port: 8081

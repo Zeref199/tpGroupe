@@ -57,8 +57,6 @@ public class TraceIngestionJob {
     private final TraceDetailsExtractor extractor;
     private final String indexPrefix;
 
-    // for incremental polling
-    private volatile long lastTimestamp = System.currentTimeMillis();
 
     public TraceIngestionJob(
             @Qualifier("esClient") RestHighLevelClient prodEsClient,

@@ -9,7 +9,7 @@ import 'moment/locale/es'
 import 'moment/locale/fr'
 
 import './style.scss';
-import TracesTable from "./components/Traces/TracesTable";
+import FavoriteComponent from "./components/favorite/FavoriteComponent";
 
 /* ************************************* */
 /* ********      VARIABLES      ******** */
@@ -24,7 +24,7 @@ const HomeComponent = ({ t, shouldDisplayLogo }) => {
         <Fragment>
             <DesktopBreadcrumbPart label={t('breadcrumb.Home')} />
             <div className="global-flexbox">
-                <TracesTable />
+                <FavoriteComponent />
             </div>
         </Fragment>
     );
