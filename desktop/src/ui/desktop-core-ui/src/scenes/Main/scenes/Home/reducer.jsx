@@ -7,6 +7,12 @@ const initialState = {
 
     psList: [],
     psLoading: false,
+
+    amcList: [],
+    amcLoading: false,
+
+    fileList: [],
+    fileLoading: false,
 };
 
 function reducer(state = initialState, action) {
@@ -42,7 +48,7 @@ function reducer(state = initialState, action) {
         case types.FETCH_PS_PENDING.type:
             return { ...state,
                 psLoading: true,
-                psError: null  };
+            };
 
         case types.FETCH_PS_FULFILLED.type:
             return { ...state,
@@ -53,7 +59,23 @@ function reducer(state = initialState, action) {
             return { ...state,
                 psLoading: false,
                 psList: [],
-                psError: action.error };
+                 };
+
+        case types.FETCH_AMC_PENDING.type:
+            return { ...state,
+                amcLoading: true,
+                  };
+
+        case types.FETCH_AMC_FULFILLED.type:
+            return { ...state,
+                amcLoading: false,
+                amcList: action.payload.amcList, };
+
+        case types.FETCH_AMC_REJECTED.type:
+            return { ...state,
+                amcLoading: false,
+                amcList: [],
+                 };
 
         default:
             return state;

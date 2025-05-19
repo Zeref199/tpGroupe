@@ -1,0 +1,31 @@
+package com.cegedim.next.core.tpgroupeobsapi.mapper;
+
+import com.cegedim.next.core.tpgroupeobsapi.dto.ServiceProviderDTO;
+import com.cegedim.next.core.tpgroupeobsapi.entity.ServiceProvider;
+
+public class ServiceProviderMapper {
+
+    public static ServiceProviderDTO mapToServiceProviderDTO(ServiceProvider sp) {
+        if (sp == null) return null;
+
+        return ServiceProviderDTO.builder()
+                .nationalId(sp.getNationalId())
+                .firstName(sp.getFirstName())
+                .lastName(sp.getLastName())
+                .email(sp.getEmail())
+                // initially no event
+                .lastEventCode(null)
+                .lastEventDate(null)
+                .build();
+    }
+
+    public static ServiceProvider mapToServiceProvider(ServiceProviderDTO dto) {
+        if (dto == null) return null;
+        ServiceProvider sp = new ServiceProvider();
+        sp.setNationalId(dto.getNationalId());
+        sp.setFirstName(dto.getFirstName());
+        sp.setLastName(dto.getLastName());
+        sp.setEmail(dto.getEmail());
+        return sp;
+    }
+}

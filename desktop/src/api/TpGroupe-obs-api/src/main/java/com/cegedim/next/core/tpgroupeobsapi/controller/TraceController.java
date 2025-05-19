@@ -1,15 +1,15 @@
 package com.cegedim.next.core.tpgroupeobsapi.controller;
 
+import com.cegedim.next.core.tpgroupeobsapi.dto.AmcStatusDTO;
+import com.cegedim.next.core.tpgroupeobsapi.dto.ServiceProviderDTO;
 import com.cegedim.next.core.tpgroupeobsapi.dto.TraceEventDTO;
-import com.cegedim.next.core.tpgroupeobsapi.entity.ServiceProvider;
 import com.cegedim.next.core.tpgroupeobsapi.service.TraceQueryService;
 import lombok.RequiredArgsConstructor;
-import org.elasticsearch.ElasticsearchStatusException;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -56,15 +56,28 @@ public class TraceController {
     }
 
     @GetMapping("/ps")
-    public ResponseEntity<List<ServiceProvider>> getServiceProviders(
+    public ResponseEntity<List<ServiceProviderDTO>> getServiceProviders(
             @RequestParam(required = false) Long from,
-            @RequestParam(required = false) Long to
+            @RequestParam(required = false) Long to,
+            @RequestParam(required = false) String numPs
     ) throws IOException {
-        Map<String, ServiceProvider> map = traceQueryService.getUniquePSWithDetails(from, to);
-        List<ServiceProvider> list = map.keySet().stream()
+        Map<String, ServiceProviderDTO> map = traceQueryService.getUniquePSWithDetails(from, to, numPs);
+        List<ServiceProviderDTO> list = map.keySet().stream()
                 .sorted()
                 .map(map::get)
                 .collect(Collectors.toList());
+        return ResponseEntity.ok(list);
+    }
+
+
+
+    @GetMapping("/amc")
+    public ResponseEntity<List<AmcStatusDTO>> getAMCStatusList(
+            @RequestParam(required = false) Long from,
+            @RequestParam(required = false) Long to,
+            @RequestParam(required = false) String numAmc
+    ) throws IOException {
+        List<AmcStatusDTO> list = traceQueryService.getAMCStatusList(from, to, numAmc);
         return ResponseEntity.ok(list);
     }
 

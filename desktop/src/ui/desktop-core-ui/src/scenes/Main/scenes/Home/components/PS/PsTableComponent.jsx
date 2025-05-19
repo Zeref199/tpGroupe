@@ -1,7 +1,7 @@
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import { DropdownItem2, Button, Dropdown2, CgdTable, LoadingSpinner2 } from '@beyond-framework/common-uitoolkit-beyond';
+import { Filtering, Label, Input, Row, Col, DropdownItem2, Button, Dropdown2, CgdTable, LoadingSpinner2 } from '@beyond-framework/common-uitoolkit-beyond';
 import actions from '../../actions';
 import TimeRangePicker from "../helpers/TimeRangePicker";
 import {CgIcon} from "@beyond-framework/common-uitoolkit-icons";
@@ -12,28 +12,33 @@ function PsTableComponent({ psList, psLoading, fetchPS }) {
     const [from, setFrom] = useState(null);
     const [to, setTo] = useState(null);
 
+    const [chips, setChips]                 = useState([]);
+    const [expanded, setExpanded]           = useState(false);
+    const buttonRef                          = useRef();
+    const [numPSFilter,       setNumPSFilter]       = useState('');
+
+    const fromMs =
+        from == null
+            ? undefined
+            : (typeof from.getTime === 'function'
+                ? from.getTime()
+                : new Date(from).getTime());
+    const toMs =
+        to == null
+            ? undefined
+            : (typeof to.getTime === 'function'
+                ? to.getTime()
+                : new Date(to).getTime());
+
 
 
     const doFetch = useCallback(() => {
-        const fromMs =
-            from == null
-                ? undefined
-                : (typeof from.getTime === 'function'
-                    ? from.getTime()
-                    : new Date(from).getTime());
-        const toMs =
-            to == null
-                ? undefined
-                : (typeof to.getTime === 'function'
-                    ? to.getTime()
-                    : new Date(to).getTime());
-
-
         fetchPS({
             from: fromMs,
             to: toMs,
+            numPs: numPSFilter,
         });
-    }, [from, to]);
+    }, [from, to, numPSFilter]);
 
 
     useEffect(doFetch, [doFetch]);
@@ -44,6 +49,28 @@ function PsTableComponent({ psList, psLoading, fetchPS }) {
             return () => clearInterval(id);
         }
     }, [refreshSecs, doFetch]);
+
+    const onFormChange = e => {
+        const { name, value } = e.target;
+        if (name === 'numPs')     setNumPSFilter(value);
+    };
+
+    const resetFields = () => {
+        setNumPSFilter('');
+    };
+
+    const onCloseChip = (chipToRemove) => {
+        const remaining = chips.filter(c => c.key !== chipToRemove.key);
+        setChips(remaining);
+
+        if (chipToRemove.key === 'numPs')     setNumPSFilter('');
+
+        fetchPS({
+            from: fromMs,
+            to: toMs,
+            numPs:   remaining.find(c=>c.key==='numPs')?.label.split(': ')[1]    || '',
+        });
+    };
 
 
     const intervals = [
@@ -65,6 +92,39 @@ function PsTableComponent({ psList, psLoading, fetchPS }) {
     return (
         <>
         <div style={{display: 'flex', marginTop: '10px'}}>
+            <Filtering
+                chips={chips}
+                onCloseChip={onCloseChip}
+                onCollapseClick={() => setExpanded(!expanded)}
+                expanded={expanded}
+                ref={buttonRef}
+                filterLabel="Filtres"
+            >
+
+                        <Label htmlFor="numPs" className="ml-4 mt-2">Num PS</Label>
+                        <Input
+                            size="sm"
+                            name="numPs"
+                            value={numPSFilter}
+                            onChange={onFormChange}
+                            style={{
+                                width: '300px',
+                                border: '1px solid #ccc'
+                            }}
+                            className="ml-4 mt-2"
+                        />
+                        <Button
+                            behavior="secondary"
+                            outline
+                            onClick={resetFields}
+                            title="Réinitialiser"
+                            className="ml-4 mt-2"
+                        >
+                            <CgIcon name="undo" />
+                        </Button>
+
+            </Filtering>
+
             <TimeRangePicker
                 onApply={(newFrom, newTo) => {
                     setFrom(newFrom);
@@ -113,12 +173,17 @@ function PsTableComponent({ psList, psLoading, fetchPS }) {
                 id="ps-table"
                 data={psList}
                 manual={false}
-                pageSize={10}
                 columns={[
                     {id: 'nationalId', Header: 'Num PS', accessor: 'nationalId', type: 'TEXT'},
                     {id: 'lastName', Header: 'Nom', accessor: 'lastName', type: 'TEXT'},
                     {id: 'firstName', Header: 'Prénom', accessor: 'firstName', type: 'TEXT'},
-                    {id: 'email', Header: 'Email', accessor: 'email', type: 'TEXT'},
+                    {id: 'email', Header: 'Email', accessor: 'email', type: 'TEXT', width: 600},
+                    { id: 'lastEventCode',   Header: 'Last Event', accessor: 'lastEventCode',   type: 'TEXT' },
+                    { id: 'lastEventDate',   Header: 'Last Event Date', accessor: row =>
+                            row.lastEventDate
+                                ? new Date(row.lastEventDate).toLocaleString()
+                                : '-'
+                        , type: 'TEXT' },
                 ]}
             />)}
 

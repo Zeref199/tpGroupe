@@ -31,7 +31,7 @@ export default function TimeRangePicker({ onApply }) {
         }
     };
 
-    const handleQuickRange = (offset) => {
+    const handleQuickRange = (offsetObj) => {
         const now      = new Date();
           const start    = sub(now, offset);  // “now minus offset”
            const end      = now;               // “now”

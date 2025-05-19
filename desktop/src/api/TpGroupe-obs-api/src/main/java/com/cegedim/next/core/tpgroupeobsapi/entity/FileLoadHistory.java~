@@ -1,0 +1,27 @@
+package com.cegedim.next.core.tpgroupeobsapi.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+import java.time.Instant;
+
+@Entity
+@Table(name = "file_load_history", schema = "public")
+@Data
+public class FileLoadHistory {
+    @Id
+    @Column(name = "id", length = 255)
+    private String id;
+
+    @Column(name = "file_name", nullable = false)
+    private String fileName;
+
+    @Column(name = "processing_date", nullable = false)
+    private Instant processingDate;
+
+    @Column(name = "processing_result", nullable = false)
+    private String processingResult;
+
+    @Column(name = "processing_anomally", nullable = true)
+    private String processingAnomally;
+}

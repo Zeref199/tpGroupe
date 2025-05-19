@@ -122,11 +122,7 @@ public class TraceDetailsExtractor {
         info.put("AckCode", ackCode);
         info.put("AckMessage", ackMessage);
 
-        boolean standardFailure = "KO".equalsIgnoreCase(ackCode) || !"0".equals(statusCode);
-        boolean iaOverride      = "KO".equalsIgnoreCase(ackCode)
-                && ackMessage != null
-                && ackMessage.startsWith("IA");
-        boolean failed = standardFailure && !iaOverride;
+        boolean failed = "KO".equalsIgnoreCase(ackCode) || !"0".equals(statusCode);
         info.put("status", failed ? "FAILED" : "PASSED");
         return info;
     }

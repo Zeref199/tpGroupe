@@ -1,9 +1,16 @@
 package com.cegedim.next.core.tpgroupeobsapi.service;
 
+import com.cegedim.next.core.tpgroupeobsapi.dto.AmcStatusDTO;
+import com.cegedim.next.core.tpgroupeobsapi.dto.ServiceProviderDTO;
 import com.cegedim.next.core.tpgroupeobsapi.dto.TraceEventDTO;
+import com.cegedim.next.core.tpgroupeobsapi.entity.AmcStatus;
 import com.cegedim.next.core.tpgroupeobsapi.entity.ServiceProvider;
 import com.cegedim.next.core.tpgroupeobsapi.helpers.TraceDetailsExtractor;
+import com.cegedim.next.core.tpgroupeobsapi.mapper.AmcStatusMapper;
+import com.cegedim.next.core.tpgroupeobsapi.mapper.ServiceProviderMapper;
+import com.cegedim.next.core.tpgroupeobsapi.repository.AmcStatusRepository;
 import com.cegedim.next.core.tpgroupeobsapi.repository.ServiceProviderRepository;
+import com.cegedim.next.core.tpgroupeobsapi.repository.SubscriptionEventRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +38,7 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -47,16 +55,22 @@ public class TraceQueryService {
     private final RestHighLevelClient esClient;
     private final String indexPattern;
     private final ServiceProviderRepository providerRepo;
+    private final SubscriptionEventRepository eventRepo;
+    private final AmcStatusRepository amcStatusRepo;
 
     public TraceQueryService(
             @Qualifier("devEsClient") RestHighLevelClient esClient,
             @Value("${storage.elasticsearch.indexPrefix}") String indexPrefix,
-            ServiceProviderRepository providerRepo
+            ServiceProviderRepository providerRepo,
+            SubscriptionEventRepository eventRepo,
+            AmcStatusRepository amcStatusRepo
     ) {
         this.esClient      = esClient;
         // wildcard over your enriched index, e.g. "dev-dev-traces*"
         this.indexPattern  = indexPrefix + "-traces*";
         this.providerRepo  = providerRepo;
+        this.eventRepo     = eventRepo;
+        this.amcStatusRepo = amcStatusRepo;
     }
 
 
@@ -301,20 +315,46 @@ public class TraceQueryService {
         return result;
     }
 
-    public Map<String, ServiceProvider> getUniquePSWithDetails(Long from, Long to) throws IOException {
+    public Map<String, ServiceProviderDTO> getUniquePSWithDetails(
+            Long from,
+            Long to,
+            String numPs
+    ) throws IOException {
+        // 1) find unique PS IDs from your Elasticsearch traces:
         List<String> uniquePs = getUniquePS(from, to);
+
+        // 2) apply the optional numPs filter
+        if (numPs != null && !numPs.isBlank()) {
+            uniquePs = uniquePs.stream()
+                    .filter(id -> id.equals(numPs))
+                    .toList();
+        }
 
         if (uniquePs.isEmpty()) {
             return Collections.emptyMap();
         }
 
+        // 3) load the ServiceProvider entities in one go
         List<ServiceProvider> providers = providerRepo.findAllById(uniquePs);
 
-        return providers.stream()
-                .collect(Collectors.toMap(
-                        ServiceProvider::getNationalId,
-                        sp -> sp
-                ));
+        // 4) map each one to DTO, tacking on the very latest event if any
+        return providers.stream().collect(Collectors.toMap(
+                ServiceProvider::getNationalId,
+                sp -> {
+                    // base DTO from your existing mapper
+                    ServiceProviderDTO dto = ServiceProviderMapper.mapToServiceProviderDTO(sp);
+
+                    // look up "last" event for this PS by descending eventDate
+                    eventRepo
+                            .findFirstByIdPsOrderByEventDateDesc(sp.getNationalId())
+                            .ifPresent(ev -> {
+                                dto.setLastEventCode(ev.getEventCode());
+                                dto.setLastEventDate(ev.getEventDate());
+                            });
+
+                    return dto;
+                }
+        ));
     }
 
 
@@ -368,4 +408,75 @@ public class TraceQueryService {
 
         return uniquePs;
     }
+
+    public List<AmcStatusDTO> getAMCStatusList(Long from, Long to, String numAmc) throws IOException {
+        // 1) figure out all the unique numAmcOtp keys in your traces
+        List<String> uniqueAmcKeys = getUniqueAMC(from, to);
+
+        // 2) if the user passed a numAmc query-param, filter down to that one
+        if (numAmc != null && !numAmc.isBlank()) {
+            uniqueAmcKeys = uniqueAmcKeys.stream()
+                    .filter(key -> key.equals(numAmc))
+                    .collect(Collectors.toList());
+        }
+
+        if (uniqueAmcKeys.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 3) fetch *all* AmcStatus rows whose numAmcOtp is in that list
+        List<AmcStatus> amcs = amcStatusRepo.findByNumAmcOtpIn(uniqueAmcKeys);
+
+        // 4) map each one to a DTO and return as a List
+        return amcs.stream()
+                .map(AmcStatusMapper::mapToAmcStatusDTO)
+                .collect(Collectors.toList());
+    }
+
+
+    public List<String> getUniqueAMC(Long from, Long to) throws IOException {
+        List<String> uniqueAmc = new ArrayList<>();
+        BoolQueryBuilder filter = QueryBuilders.boolQuery();
+        if (from != null) filter.filter(QueryBuilders.rangeQuery("startTimeMillis").gte(from));
+        if (to   != null) filter.filter(QueryBuilders.rangeQuery("startTimeMillis").lte(to));
+
+        CompositeAggregationBuilder compositeAgg = AggregationBuilders
+                .composite("amc_buckets",
+                        List.of(
+                                new TermsValuesSourceBuilder("amc")
+                                        .field("details.request.num.amc.keyword")
+                        )
+                )
+                .size(1000);
+
+        Map<String, Object> afterKey = null;
+
+        do {
+            CompositeAggregationBuilder pagedAgg = (afterKey == null)
+                    ? compositeAgg
+                    : compositeAgg.aggregateAfter(afterKey);
+
+            SearchSourceBuilder src = new SearchSourceBuilder()
+                    .query(filter)
+                    .size(0)
+                    .aggregation(pagedAgg);
+
+            SearchRequest req = new SearchRequest(indexPattern)
+                    .source(src);
+
+            SearchResponse resp = esClient.search(req, RequestOptions.DEFAULT);
+
+            ParsedComposite buckets = resp.getAggregations()
+                    .get("amc_buckets");
+
+            for (ParsedComposite.ParsedBucket bucket : buckets.getBuckets()) {
+                uniqueAmc.add((String) bucket.getKey().get("amc"));
+            }
+
+            afterKey = buckets.afterKey();
+        } while (afterKey != null);
+
+        return uniqueAmc;
+    }
+
 }

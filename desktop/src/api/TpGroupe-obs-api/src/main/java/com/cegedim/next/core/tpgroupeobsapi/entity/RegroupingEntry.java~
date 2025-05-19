@@ -1,0 +1,27 @@
+package com.cegedim.next.core.tpgroupeobsapi.entity;
+
+import jakarta.persistence.*;
+import lombok.Data;
+
+@Entity
+@Table(name = "regrouping_table", schema = "public")
+@Data
+public class RegroupingEntry {
+
+    @Id
+    @Column(name = "id", length = 255)
+    private String id;
+
+    @ManyToOne
+    @JoinColumn(name = "file_load_history", nullable = false)
+    private FileLoadHistory fileLoadHistory;
+
+    @Column(name = "num_complementary_organism", nullable = false)
+    private String numComplementaryOrganism;
+
+    @Column(name = "signing_organisme_label")
+    private String signingOrganismeLabel;
+
+    @Column(name = "complementary_organisme_label")
+    private String complementaryOrganismeLabel;
+}

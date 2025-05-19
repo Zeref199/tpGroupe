@@ -3,6 +3,7 @@ import {  TabContent, TabPane, Nav, NavItem, NavLink } from '@beyond-framework/c
 import classNames from 'classnames';
 import TracesTable from "../Traces/TracesTableComponent";
 import PsTableComponent from "../PS/PsTableComponent";
+import AmcTableComponent from "../AMC/AmcTableComponent";
 
 function FavoriteComponent({  }) {
     const [selectedTab, setSelectedTab] = useState('Traces');
@@ -36,6 +37,14 @@ function FavoriteComponent({  }) {
                         AMC
                     </NavLink>
                 </NavItem>
+                <NavItem>
+                    <NavLink
+                        id="tab-networks"
+                        className={classNames({ active: selectedTab === 'GRAPH' })}
+                    >
+                        <a href="http://localhost:3000/d/fej3g3rssvjeob/tpgroupe?orgId=1&from=now-90d&to=now&timezone=browser&var-Filters=" target="_blank">Graph</a>
+                    </NavLink>
+                </NavItem>
             </Nav>
 
             <TabContent activeTab={selectedTab}>
@@ -45,6 +54,10 @@ function FavoriteComponent({  }) {
                 <TabPane tabId="PS">
                     {selectedTab === 'PS' && <PsTableComponent />}
                 </TabPane>
+                <TabPane tabId="AMC">
+                    {selectedTab === 'AMC' && <AmcTableComponent />}
+                </TabPane>
+
             </TabContent>
         </>
     );

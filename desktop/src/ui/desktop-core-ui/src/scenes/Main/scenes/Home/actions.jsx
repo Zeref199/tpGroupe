@@ -50,13 +50,13 @@ export function fetchTraces({ page, size = 10, operation = '', from, to,  status
     };
 }
 
-export function fetchPS({ from, to } = {}) {
+export function fetchPS({ from, to, numPs } = {}) {
     return async dispatch => {
         dispatch({ type: types.FETCH_PS_PENDING.type });
 
         try {
             const response = await Api.all('ps')
-                .getAll({ from, to });
+                .getAll({ from, to, numPs });
 
             const psList = Array.isArray(response.body())
                 ? response.body().map(resource => resource.data())
@@ -75,10 +75,34 @@ export function fetchPS({ from, to } = {}) {
     };
 }
 
+export function fetchAMC({ from, to, numAmc } = {}) {
+    return async dispatch => {
+        dispatch({ type: types.FETCH_AMC_PENDING.type });
+
+        try {
+            const response = await Api.all('amc').getAll({ from, to, numAmc });
+
+            const amcList = Array.isArray(response.body())
+                ? response.body().map(resource => resource.data())
+                : [];
+
+            dispatch({
+                type: types.FETCH_AMC_FULFILLED.type,
+                payload: { amcList },
+            });
+        } catch (error) {
+            dispatch({
+                type: types.FETCH_AMC_REJECTED.type,
+                error: error.message || 'Failed to fetch liste AMC',
+            });
+        }
+    };
+}
 
 const actions = {
     fetchTraces,
-    fetchPS
+    fetchPS,
+    fetchAMC,
 }
 
 export default actions

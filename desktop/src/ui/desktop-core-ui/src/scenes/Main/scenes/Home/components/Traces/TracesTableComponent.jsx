@@ -397,6 +397,22 @@ function TracesTableComponent({ traces, loading, fetchTraces }) {
                                 type: 'TEXT'
                             },
                             {
+                                id: "duration",
+                                Header: "Duration",
+                                accessor: row => {
+                                    const us = row.duration;
+                                    const ms = us / 1_000;
+                                    if (ms >= 1_000) {
+                                        // show in seconds
+                                        return `${(ms / 1_000).toFixed(2)} s`;
+                                    } else {
+                                        // show in milliseconds
+                                        return `${ms.toFixed(2)} ms`;
+                                    }
+                                },
+                                type: "TEXT"
+                            },
+                            {
                                 id: 'details',
                                 Header: 'Details',
                                 Cell: ({ row }) => {
